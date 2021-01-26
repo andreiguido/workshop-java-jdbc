@@ -1,8 +1,11 @@
 package gui;
 
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -17,6 +20,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import model.entities.Seller;
@@ -24,46 +28,64 @@ import model.exceptions.ValidationException;
 import model.services.SellerService;
 
 public class SellerFormController implements Initializable {
-	
+
 	private Seller entity;
-	
+
 	private SellerService service;
-	
+
 	private List<DataChangeListener> dataChangeListeners = new ArrayList<>();
-	
+
 	@FXML
 	private TextField txtId;
-	
+
 	@FXML
 	private TextField txtName;
-	
+
+	@FXML
+	private TextField txtEmail;
+
+	@FXML
+	private DatePicker dpBirthDate;
+
+	@FXML
+	private TextField txtBaseSalary;
+
 	@FXML
 	private Label lblErrorName;
-	
+
+	@FXML
+	private Label lblErrorEmail;
+
+	@FXML
+	private Label lblErrorBirthDate;
+
+	@FXML
+	private Label lblErrorBaseSalary;
+
 	@FXML
 	private Button btnSave;
-	
+
 	@FXML
 	private Button btnCancel;
-	
+
 	public void setSeller(Seller entity) {
 		this.entity = entity;
 	}
-	
+
 	public void subscribeDataChangeListener(DataChangeListener listener) {
 		dataChangeListeners.add(listener);
 	}
-	
+
 	public void setSellerService(SellerService service) {
 		this.service = service;
 	}
-	
+
 	@FXML
 	public void onBtnSaveAction(ActionEvent event) {
-		if(entity == null) {
+		if (entity == null) {
 			new IllegalStateException("Entity was null!");
 		}
-		if(service == null) {
+		if (service == null) {
 			throw new IllegalStateException("Servive was null!");
 		}
 		try {
@@ -71,39 +93,37 @@ public class SellerFormController implements Initializable {
 			service.saveOrUpdate(entity);
 			notifyDataChangeListeners();
 			Utils.currentStage(event).close();
-		}
-		catch(ValidationException e) {
+		} catch (ValidationException e) {
 			setErrorMessages(e.getErros());
-		}
-		catch(DbException e) {
+		} catch (DbException e) {
 			Alerts.showAlert("Error Saving object", null, e.getMessage(), AlertType.ERROR);
 		}
 	}
-	
+
 	private void notifyDataChangeListeners() {
-		for(DataChangeListener listener : dataChangeListeners) {
+		for (DataChangeListener listener : dataChangeListeners) {
 			listener.onDataChanged();
 		}
-		
+
 	}
 
 	private Seller getFormData() {
-		
+
 		ValidationException exception = new ValidationException("Erro ao validar!");
-		
+
 		Seller obj = new Seller();
-		
+
 		obj.setId(Utils.tryParseToInt(txtId.getText()));
-		
-		if(txtName.getText() == null || txtName.getText().trim().equals("")) {
+
+		if (txtName.getText() == null || txtName.getText().trim().equals("")) {
 			exception.addError("name", "O campo não pode ser vazio!");
 		}
 		obj.setName(txtName.getText());
-		
-		if(exception.getErros().size() > 0) {
+
+		if (exception.getErros().size() > 0) {
 			throw exception;
 		}
-		
+
 		return obj;
 	}
 
@@ -115,26 +135,35 @@ public class SellerFormController implements Initializable {
 	@Override
 	public void initialize(URL url, ResourceBundle rb) {
 		initializeNodes();
-		
+
 	}
-	
+
 	private void initializeNodes() {
 		Constraints.setTextFieldInteger(txtId);
-		Constraints.setTextFieldMaxLength(txtName, 30);
+		Constraints.setTextFieldMaxLength(txtName, 60);
+		Constraints.setTextFieldMaxLength(txtEmail, 60);
+		Constraints.setTextFieldDouble(txtBaseSalary);
+		Utils.formatDatePicker(dpBirthDate, "dd/MM/yyyy");
 	}
-	
+
 	public void updateFormData() {
-		if(entity == null) {
+		if (entity == null) {
 			throw new IllegalStateException("Entity was null!");
 		}
+		Locale.setDefault(Locale.US);
 		txtId.setText(String.valueOf(entity.getId()));
 		txtName.setText(entity.getName());
+		txtEmail.setText(entity.getEmail());
+		txtBaseSalary.setText(String.format("%.2f", entity.getBaseSalary()));
+		if (entity.getBirthDate() != null) {
+			dpBirthDate.setValue(LocalDate.ofInstant(entity.getBirthDate().toInstant(), ZoneId.systemDefault()));
+		}
 	}
-	
+
 	private void setErrorMessages(Map<String, String> errors) {
 		Set<String> fields = errors.keySet();
-		
-		if(fields.contains("name")) {
+
+		if (fields.contains("name")) {
 			lblErrorName.setText(errors.get("name"));
 		}
 	}
