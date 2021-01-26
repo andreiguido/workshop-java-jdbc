@@ -1,9 +1,11 @@
 package gui;
 
 import java.net.URL;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,16 +66,16 @@ public class SellerFormController implements Initializable {
 	private ComboBox<Department> comboBoxDepartment;
 
 	@FXML
-	private Label labelErrorName;
+	private Label lblErrorName;
 
 	@FXML
-	private Label labelErrorEmail;
+	private Label lblErrorEmail;
 
 	@FXML
-	private Label labelErrorBirthDate;
+	private Label lblErrorBirthDate;
 
 	@FXML
-	private Label labelErrorBaseSalary;
+	private Label lblErrorBaseSalary;
 
 	@FXML
 	private Button btnSave;
@@ -110,7 +112,7 @@ public class SellerFormController implements Initializable {
 			notifyDataChangeListeners();
 			Utils.currentStage(event).close();
 		} catch (ValidationException e) {
-			setErrorMessages(e.getErros());
+			setErrorMessages(e.getErrors());
 		} catch (DbException e) {
 			Alerts.showAlert("Error saving object", null, e.getMessage(), AlertType.ERROR);
 		}
@@ -134,7 +136,27 @@ public class SellerFormController implements Initializable {
 		}
 		obj.setName(txtName.getText());
 
-		if (exception.getErros().size() > 0) {
+		if (txtEmail.getText() == null || txtEmail.getText().trim().equals("")) {
+			exception.addError("email", "O campo não pode estar vazio");
+		}
+		obj.setEmail(txtEmail.getText());
+		
+		if (dpBirthDate.getValue() == null) {
+			exception.addError("birthDate", "O campo não pode estar vazio");
+		}
+		else {
+			Instant instant = Instant.from(dpBirthDate.getValue().atStartOfDay(ZoneId.systemDefault()));
+			obj.setBirthDate(Date.from(instant));
+		}
+		
+		if (txtBaseSalary.getText() == null || txtBaseSalary.getText().trim().equals("")) {
+			exception.addError("baseSalary", "O campo não pode estar vazio");
+		}
+		obj.setBaseSalary(Utils.tryParseToDouble(txtBaseSalary.getText()));
+		
+		obj.setDepartment(comboBoxDepartment.getValue());
+		
+		if (exception.getErrors().size() > 0) {
 			throw exception;
 		}
 
@@ -192,9 +214,10 @@ public class SellerFormController implements Initializable {
 	private void setErrorMessages(Map<String, String> errors) {
 		Set<String> fields = errors.keySet();
 
-		if (fields.contains("name")) {
-			labelErrorName.setText(errors.get("name"));
-		}
+		lblErrorName.setText((fields.contains("name") ? errors.get("name") : ""));
+		lblErrorEmail.setText((fields.contains("email") ? errors.get("email") : ""));
+		lblErrorBirthDate.setText((fields.contains("birthDate") ? errors.get("birthDate") : ""));
+		lblErrorBaseSalary.setText((fields.contains("baseSalary") ? errors.get("baseSalary") : ""));
 	}
 
 	private void initializeComboBoxDepartment() {
